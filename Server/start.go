@@ -5,7 +5,7 @@ import (
 	"log"
 	"fmt"
 	"flag"
-	"strings"
+	//"strings"
 	"marvin/GameConn/GC"
 	"marvin/GraphEng/GE"
 	ws "github.com/gorilla/websocket"
@@ -31,7 +31,7 @@ func Start() {
 	servermanager.OnCloseConn = ServerCloseConn
 	
 	//Runs the server
-	ipAddr := GetOutboundIP()
+	ipAddr := GetLocalIP()
 	ipAddrS := fmt.Sprintf("%s:%s", ipAddr, *port)
 	fmt.Println("Running on:", ipAddrS)
 	Server.Run(ipAddrS)
@@ -63,14 +63,30 @@ func CheckErr(err error) {
 	}
 }
 
-// Get preferred outbound ip of this machine
-func GetOutboundIP() string {
-    conn, err := net.Dial("udp", "8.8.8.8:80")
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer conn.Close()
+//// Get preferred outbound ip of this machine
+//func GetOutboundIP() string {
+//    conn, err := net.Dial("udp", "8.8.8.8:80")
+//    if err != nil {
+//        log.Fatal(err)
+//    }
+//    defer conn.Close()
+//
+//    localAddr := strings.Split(conn.LocalAddr().String(), ":")[0]
+//    return localAddr
+//}
 
-    localAddr := strings.Split(conn.LocalAddr().String(), ":")[0]
-    return localAddr
+func GetLocalIP() string {
+    addrs, err := net.InterfaceAddrs()
+    if err != nil {
+        return ""
+    }
+    for _, address := range addrs {
+        // check the address type and if it is not a loopback the display it
+        if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+            if ipnet.IP.To4() != nil {
+                return ipnet.IP.String()
+            }
+        }
+    }
+    return ""
 }
