@@ -1,10 +1,9 @@
-package main 
+package main
 
 import (
-	"marvin/TerraNomina_Server/Server"
+	"github.com/mortim-portim/TerraNomina_Server/Server"
 )
 
 func main() {
 	Server.Start()
 }
-
