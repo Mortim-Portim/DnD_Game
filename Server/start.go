@@ -7,8 +7,8 @@ import (
 	"net"
 
 	//"strings"
-	"marvin/GameConn/GC"
-	"marvin/GraphEng/GE"
+	"github.com/mortim-portim/GameConn/GC"
+	"github.com/mortim-portim/GraphEng/GE"
 
 	ws "github.com/gorilla/websocket"
 )
