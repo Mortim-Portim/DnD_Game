@@ -3,66 +3,82 @@ package Server
 import (
 	"flag"
 	"fmt"
-	"log"
+	"time"
 	"net"
 
 	//"strings"
 	"github.com/mortim-portim/GameConn/GC"
 	"github.com/mortim-portim/GraphEng/GE"
+	cmp "github.com/mortim-portim/GraphEng/Compression"
+	"github.com/mortim-portim/TN_Engine/TNE"
 
 	ws "github.com/gorilla/websocket"
 )
 
 func Start() {
 	flag.Parse()
-	if flag.NFlag() != 2 {
-		log.Fatal("Please specifiy the following flags: [port], [port]\nUse -help to display all posible flags")
-	}
-	done = make(chan struct{})
-
-	wrld, err := GE.LoadWorldStructure(0, 0, 1920, 1080, *world_file, RES+TILE_FILES, RES+STRUCTURE_FILES)
+	done := make(chan bool)
+	wrld, err := GE.LoadWorldStructure(0, 0, 1920, 1080, *world_file, F_TILES, F_STRUCTURES)
 	CheckErr(err)
-	World = wrld
 	wrld_bytes, err = wrld.ToBytes()
-	wrld_bytes = append([]byte{MAP_REQUEST}, wrld_bytes...)
 	CheckErr(err)
 
 	GC.InitSyncVarStandardTypes()
 	Server = GC.GetNewServer()
-	servermanager := GC.GetServerManager(Server)
-	servermanager.InputHandler = ServerInput
-	servermanager.OnNewConn = ServerNewConn
-	servermanager.OnCloseConn = ServerCloseConn
+	ServerManager = GC.GetServerManager(Server)
+	ServerManager.InputHandler = ServerInput
+	ServerManager.OnNewConn = ServerNewConn
+	ServerManager.OnCloseConn = ServerCloseConn
 
 	//Runs the server
 	ipAddr := GetLocalIP()
 	ipAddrS := fmt.Sprintf("%s:%s", ipAddr, *port)
 	fmt.Println("Running on:", ipAddrS)
 	Server.Run(ipAddrS)
-
+	time.Sleep(time.Second)
+	
+	sm,err := TNE.GetSmallWorld(0, 0, 1920, 1080, F_TILES, F_STRUCTURES, F_ENTITY)
+	CheckErr(err)
+	sm.SetWorldStruct(wrld)
+	SmallWorld = sm
+	SmPerCon = make(map[*ws.Conn]*TNE.SmallWorld)
+	
 	<-done
 }
 
 func ServerInput(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Printf("Client %s send msg of len(%v): '%v'\n", c.RemoteAddr().String(), len(msg), msg)
 
-	if msg[0] == MAP_REQUEST {
-		fmt.Print("Sending map...")
-		s.Send(wrld_bytes, s.ConnToIdx[c])
-		s.WaitForConfirmation(s.ConnToIdx[c])
-		fmt.Print("done\n")
-	}
-
-	if msg[0] == CHAR_SEND {
-		fmt.Printf("%v %v %v %v \n", msg[1], msg[2], msg[3], msg[4])
-	}
+//	if msg[0] == MAP_REQUEST {
+//		fmt.Print("Sending map...")
+//		s.Send(wrld_bytes, s.ConnToIdx[c])
+//		s.WaitForConfirmation(s.ConnToIdx[c])
+//		fmt.Print("done\n")
+//	}
+//
+//	if msg[0] == CHAR_SEND {
+//		fmt.Printf("%v %v %v %v \n", msg[1], msg[2], msg[3], msg[4])
+//	}
 }
 func ServerNewConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Println("New Client Connected: ", c.RemoteAddr().String())
+	
+	
+	data := append([]byte{GC.BINARYMSG}, []byte(TNE.NumberOfSVACIDs_Msg)...)
+	data = append(data, cmp.Int16ToBytes(int16(TNE.GetSVACID_Count()))...)
+	s.Send(data, s.ConnToIdx[c])
+	s.WaitForConfirmation(s.ConnToIdx[c])
+	
+	SmPerCon[c] = SmallWorld.New()
+	SmPerCon[c].Register(ServerManager, c)
+	
+	time.Sleep(time.Second)
+	SmPerCon[c].SetWorldStruct(SmPerCon[c].Struct)
+	ServerManager.UpdateSyncVars()
 }
 func ServerCloseConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Println("Client Disconnected: ", c.RemoteAddr().String())
-
+	SmallWorld.Register(ServerManager, c)
 }
 
 func CheckErr(err error) {
@@ -70,18 +86,6 @@ func CheckErr(err error) {
 		panic(err)
 	}
 }
-
-//// Get preferred outbound ip of this machine
-//func GetOutboundIP() string {
-//    conn, err := net.Dial("udp", "8.8.8.8:80")
-//    if err != nil {
-//        log.Fatal(err)
-//    }
-//    defer conn.Close()
-//
-//    localAddr := strings.Split(conn.LocalAddr().String(), ":")[0]
-//    return localAddr
-//}
 
 func GetLocalIP() string {
 	addrs, err := net.InterfaceAddrs()
