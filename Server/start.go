@@ -94,17 +94,18 @@ func ServerNewConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	data = append(data, cmp.Int16ToBytes(int16(TNE.GetSVACID_Count()))...)
 	s.Send(data, s.ConnToIdx[c])
 	s.WaitForConfirmation(s.ConnToIdx[c])
-	
+	//time.Sleep(time.Second)
 	newSM := SmallWorld.New()
 	newSM.Register(ServerManager, c)
-	time.Sleep(time.Second)
 	newSM.SetWorldStruct(newSM.Struct)
 	
 	SmPerCon[c] = newSM
 }
 func ServerCloseConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Println("Client Disconnected: ", c.RemoteAddr().String())
-	World.RemovePlayer(SmPerCon[c].ActivePlayer.Player)
+	if sm, ok := SmPerCon[c]; ok && sm.ActivePlayer.HasPlayer() {
+		World.RemovePlayer(SmPerCon[c].ActivePlayer.Player)
+	}
 	delete(SmPerCon, c)
 	PlayersChanged = true
 }
