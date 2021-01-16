@@ -15,27 +15,18 @@ import (
 	ws "github.com/gorilla/websocket"
 )
 
+const FPS = 30
+const delay = time.Second/FPS
+
 func Start() {
 	flag.Parse()
 	done := make(chan bool)
 	wrld, err := GE.LoadWorldStructure(0, 0, 1920, 1080, *world_file, F_TILES, F_STRUCTURES)
+	wrld.SetLightStats(30, 255, 2)
+	wrld.SetDisplayWH(32,18)
 	CheckErr(err)
 	wrld_bytes, err = wrld.ToBytes()
 	CheckErr(err)
-
-	GC.InitSyncVarStandardTypes()
-	Server = GC.GetNewServer()
-	ServerManager = GC.GetServerManager(Server)
-	ServerManager.InputHandler = ServerInput
-	ServerManager.OnNewConn = ServerNewConn
-	ServerManager.OnCloseConn = ServerCloseConn
-
-	//Runs the server
-	ipAddr := GetLocalIP()
-	ipAddrS := fmt.Sprintf("%s:%s", ipAddr, *port)
-	fmt.Println("Running on:", ipAddrS)
-	Server.Run(ipAddrS)
-	time.Sleep(time.Second)
 	
 	sm,err := TNE.GetSmallWorld(0, 0, 1920, 1080, F_TILES, F_STRUCTURES, F_ENTITY)
 	CheckErr(err)
@@ -43,42 +34,79 @@ func Start() {
 	SmallWorld = sm
 	SmPerCon = make(map[*ws.Conn]*TNE.SmallWorld)
 	
+	World = TNE.GetWorld(&TNE.WorldParams{2,SmallWorld.Ef,SmallWorld.FrameCounter,wrld}, "./test")
+
+	GC.InitSyncVarStandardTypes()
+	Server = GC.GetNewServer()
+	ServerManager = GC.GetServerManager(Server)
+	ServerManager.InputHandler = ServerInput
+	ServerManager.OnNewConn = ServerNewConn
+	ServerManager.OnCloseConn = ServerCloseConn
+	//Runs the server
+	ipAddr := GetLocalIP()
+	ipAddrS := fmt.Sprintf("%s:%s", ipAddr, *port)
+	fmt.Println("Running on:", ipAddrS)
+	Server.Run(ipAddrS)
+	time.Sleep(time.Second)
+		
+	for true {
+		st := time.Now()
+		
+		*SmallWorld.FrameCounter ++
+		SmallWorld.Struct.UpdateLightLevel(1)
+		SmallWorld.Struct.UpdateAllLightsIfNecassary()
+		
+		for _,sm := range(SmPerCon) {
+			sm.UpdateVars()
+			ok, pl := sm.HasNewActivePlayer()
+			if ok {
+				World.AddPlayer(pl)
+				fmt.Printf("New active Player: %p\n", &pl.Race.Entity)
+				PlayersChanged = true
+			}
+		}
+		
+		if PlayersChanged {
+			for _,sm := range(SmPerCon) {
+				sm.GetSyncPlayersFromWorld(World)
+			}
+			PlayersChanged = false
+		}
+		
+		ServerManager.UpdateSyncVars()
+		Server.WaitForAllConfirmations()
+		
+		t := time.Now().Sub(st)
+		if t < delay {
+			time.Sleep(delay-t)
+		}
+	}
+	
 	<-done
 }
 
 func ServerInput(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Printf("Client %s send msg of len(%v): '%v'\n", c.RemoteAddr().String(), len(msg), msg)
-
-//	if msg[0] == MAP_REQUEST {
-//		fmt.Print("Sending map...")
-//		s.Send(wrld_bytes, s.ConnToIdx[c])
-//		s.WaitForConfirmation(s.ConnToIdx[c])
-//		fmt.Print("done\n")
-//	}
-//
-//	if msg[0] == CHAR_SEND {
-//		fmt.Printf("%v %v %v %v \n", msg[1], msg[2], msg[3], msg[4])
-//	}
 }
 func ServerNewConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Println("New Client Connected: ", c.RemoteAddr().String())
-	
-	
 	data := append([]byte{GC.BINARYMSG}, []byte(TNE.NumberOfSVACIDs_Msg)...)
 	data = append(data, cmp.Int16ToBytes(int16(TNE.GetSVACID_Count()))...)
 	s.Send(data, s.ConnToIdx[c])
 	s.WaitForConfirmation(s.ConnToIdx[c])
 	
-	SmPerCon[c] = SmallWorld.New()
-	SmPerCon[c].Register(ServerManager, c)
-	
+	newSM := SmallWorld.New()
+	newSM.Register(ServerManager, c)
 	time.Sleep(time.Second)
-	SmPerCon[c].SetWorldStruct(SmPerCon[c].Struct)
-	ServerManager.UpdateSyncVars()
+	newSM.SetWorldStruct(newSM.Struct)
+	
+	SmPerCon[c] = newSM
 }
 func ServerCloseConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Println("Client Disconnected: ", c.RemoteAddr().String())
-	SmallWorld.Register(ServerManager, c)
+	World.RemovePlayer(SmPerCon[c].ActivePlayer.Player)
+	delete(SmPerCon, c)
+	PlayersChanged = true
 }
 
 func CheckErr(err error) {

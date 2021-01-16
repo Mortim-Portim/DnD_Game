@@ -40,6 +40,9 @@ var (
 	ServerManager *GC.ServerManager
 	SmallWorld *TNE.SmallWorld
 	
+	World *TNE.World
+	PlayersChanged bool
+	
 	SmPerCon map[*ws.Conn]*TNE.SmallWorld
 	
 	wrld_bytes []byte
