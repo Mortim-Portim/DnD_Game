@@ -72,7 +72,7 @@ func Start() {
 			}
 			PlayersChanged = false
 		}
-		
+		fmt.Println("waiting...")
 		ServerManager.UpdateSyncVars()
 		Server.WaitForAllConfirmations()
 		
