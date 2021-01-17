@@ -61,8 +61,12 @@ func Start() {
 			ok, pl := sm.HasNewActivePlayer()
 			if ok {
 				World.AddPlayer(pl)
-				fmt.Printf("New active Player: %p\n", &pl.Race.Entity)
+				fmt.Printf("New active Player: %p\n", pl)
 				PlayersChanged = true
+			}
+			if sm.ActivePlayer.HasPlayer() {
+				x,y := sm.ActivePlayer.Player.IntPos()
+				fmt.Printf("%p: %v, %v\n", sm.ActivePlayer.Player, x,y)
 			}
 		}
 		
@@ -72,9 +76,12 @@ func Start() {
 			}
 			PlayersChanged = false
 		}
-		fmt.Println("waiting....")
+		fmt.Println("waiting: ", World.PrintPlayerPos())
+		
+		//playerJoining.Lock()
 		ServerManager.UpdateSyncVars()
 		Server.WaitForAllConfirmations()
+		//playerJoining.Unlock()
 		
 		t := time.Now().Sub(st)
 		if t < delay {
@@ -90,20 +97,26 @@ func ServerInput(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 }
 func ServerNewConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Println("New Client Connected: ", c.RemoteAddr().String())
+	
+	//playerJoining.Lock()
+	
 	data := append([]byte{GC.BINARYMSG}, []byte(TNE.NumberOfSVACIDs_Msg)...)
 	data = append(data, cmp.Int16ToBytes(int16(TNE.GetSVACID_Count()))...)
-	s.Send(data, s.ConnToIdx[c])
-	s.WaitForConfirmation(s.ConnToIdx[c])
-	//time.Sleep(time.Second)
+	s.Send(data, c)
+	s.WaitForConfirmation(c)
+	
 	newSM := SmallWorld.New()
 	newSM.Register(ServerManager, c)
 	newSM.SetWorldStruct(newSM.Struct)
 	
 	SmPerCon[c] = newSM
+	
+	//playerJoining.Unlock()
 }
 func ServerCloseConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Println("Client Disconnected: ", c.RemoteAddr().String())
 	if sm, ok := SmPerCon[c]; ok && sm.ActivePlayer.HasPlayer() {
+		fmt.Printf("Removing Player %p from the world\n", SmPerCon[c].ActivePlayer.Player)
 		World.RemovePlayer(SmPerCon[c].ActivePlayer.Player)
 	}
 	delete(SmPerCon, c)

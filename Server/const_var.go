@@ -1,6 +1,7 @@
 package Server
 
 import (
+	"sync"
 	"flag"
 	ws "github.com/gorilla/websocket"
 	"github.com/mortim-portim/GameConn/GC"
@@ -42,6 +43,8 @@ var (
 	
 	World *TNE.World
 	PlayersChanged bool
+	
+	playerJoining sync.Mutex
 	
 	SmPerCon map[*ws.Conn]*TNE.SmallWorld
 	
