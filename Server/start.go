@@ -55,6 +55,7 @@ func Start() {
 		*SmallWorld.FrameCounter ++
 		SmallWorld.Struct.UpdateLightLevel(1)
 		SmallWorld.Struct.UpdateAllLightsIfNecassary()
+		World.UpdateAll()
 		
 		for _,sm := range(SmPerCon) {
 			sm.UpdateVars()
@@ -76,8 +77,10 @@ func Start() {
 			}
 			PlayersChanged = false
 		}
-		fmt.Println("waiting: ", World.PrintPlayerPos())
-		
+		out := World.PrintPlayerPos()
+		if len(out) > 0 {
+			fmt.Println("waiting: ", out)
+		}
 		//playerJoining.Lock()
 		ServerManager.UpdateSyncVars()
 		Server.WaitForAllConfirmations()
