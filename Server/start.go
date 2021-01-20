@@ -36,6 +36,7 @@ func Start() {
 	SmPerCon = make(map[*ws.Conn]*TNE.SmallWorld)
 	
 	World = TNE.GetWorld(&TNE.WorldParams{2,SmallWorld.Ef,SmallWorld.FrameCounter,wrld}, "./test")
+	InitializeEntities(World)
 
 	GC.InitSyncVarStandardTypes()
 	Server = GC.GetNewServer()
@@ -64,10 +65,9 @@ func Start() {
 		*SmallWorld.FrameCounter ++
 		SmallWorld.Struct.UpdateLightLevel(1)
 		SmallWorld.Struct.UpdateAllLightsIfNecassary()
-		World.UpdateAll()
+		World.UpdateAllPlayer()
 		
 		for _,sm := range(SmPerCon) {
-			sm.UpdateVars()
 			ok, pl := sm.HasNewActivePlayer()
 			if ok {
 				World.AddPlayer(pl)
@@ -77,7 +77,11 @@ func Start() {
 			if sm.ActivePlayer.HasPlayer() {
 				x,y := sm.ActivePlayer.Player.IntPos()
 				fmt.Printf("%p: %v, %v\n", sm.ActivePlayer.Player, x,y)
+				cidxs := World.GetPlayerChunks(sm.ActivePlayer.Player)
+				World.UpdateChunks(cidxs)
+				sm.SetEntitiesFromChunks(World.Chunks, cidxs...)
 			}
+			sm.UpdateVars()
 		}
 		
 		if PlayersChanged {
@@ -110,20 +114,18 @@ func ServerInput(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 func ServerNewConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Println("New Client Connected: ", c.RemoteAddr().String())
 	
-	//playerJoining.Lock()
+	playerJoining.Lock()
 	
 	data := append([]byte{GC.BINARYMSG}, []byte(TNE.NumberOfSVACIDs_Msg)...)
 	data = append(data, cmp.Int16ToBytes(int16(TNE.GetSVACID_Count()))...)
 	s.Send(data, c)
 	s.WaitForConfirmation(c)
-	
 	newSM := SmallWorld.New()
 	newSM.Register(ServerManager, c)
 	newSM.SetWorldStruct(newSM.Struct)
-	
 	SmPerCon[c] = newSM
 	
-	//playerJoining.Unlock()
+	playerJoining.Unlock()
 }
 func ServerCloseConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Println("Client Disconnected: ", c.RemoteAddr().String())
