@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"time"
 	"net"
-
-	//"strings"
+	"log"
+	"os"
+	"os/signal"
 	"github.com/mortim-portim/GameConn/GC"
 	"github.com/mortim-portim/GraphEng/GE"
 	cmp "github.com/mortim-portim/GraphEng/Compression"
@@ -47,8 +48,16 @@ func Start() {
 	ipAddrS := fmt.Sprintf("%s:%s", ipAddr, *port)
 	fmt.Println("Running on:", ipAddrS)
 	Server.Run(ipAddrS)
+	
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
+	go func() {
+		<-interrupt
+		log.Fatal("User Termination")
+		return
+	}()
 	time.Sleep(time.Second)
-		
+	
 	for true {
 		st := time.Now()
 		
