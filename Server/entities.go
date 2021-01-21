@@ -34,7 +34,7 @@ func InitializeEntities(w *TNE.World) {
 	
 	halfling, err := w.Ef.GetByName("Halfling")
 	CheckErr(err)
-	halfling.SetMiddleTo(5,5)
+	halfling.SetMiddleTo(9,9)
 	halfling.RegisterUpdateCallback(u_r.Copy())
 	
 	w.AddEntity(halfling)
