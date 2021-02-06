@@ -42,7 +42,8 @@ var (
 	SmallWorld *TNE.SmallWorld
 	
 	World *TNE.World
-	PlayersChanged bool
+	PlayersChanged, UpdateAllPositions bool
+	ActionReset *chan bool
 	
 	playerJoining sync.Mutex
 	

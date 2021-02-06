@@ -29,8 +29,11 @@ func Start() {
 	wrld_bytes, err = wrld.ToBytes()
 	CheckErr(err)
 	
-	sm,err := TNE.GetSmallWorld(0, 0, 1920, 1080, F_TILES, F_STRUCTURES, F_ENTITY)
+	c := make(chan bool)
+	ActionReset = &c
+	sm,err := TNE.GetSmallWorld(0, 0, 1920, 1080, F_TILES, F_STRUCTURES, F_ENTITY, ActionReset)
 	CheckErr(err)
+	
 	sm.SetWorldStruct(wrld)
 	SmallWorld = sm
 	SmPerCon = make(map[*ws.Conn]*TNE.SmallWorld)
@@ -39,6 +42,7 @@ func Start() {
 	InitializeEntities(World)
 
 	GC.InitSyncVarStandardTypes()
+	GC.PRINT_LOG = false
 	Server = GC.GetNewServer()
 	ServerManager = GC.GetServerManager(Server)
 	ServerManager.InputHandler = ServerInput
@@ -67,6 +71,11 @@ func Start() {
 		SmallWorld.Struct.UpdateAllLightsIfNecassary()
 		World.UpdateAllPlayer()
 		
+		if UpdateAllPositions {
+			World.UpdateAllPos()
+			UpdateAllPositions = false
+		}
+		
 		for _,sm := range(SmPerCon) {
 			ok, pl := sm.HasNewActivePlayer()
 			if ok {
@@ -75,8 +84,6 @@ func Start() {
 				PlayersChanged = true
 			}
 			if sm.ActivePlayer.HasPlayer() {
-				x,y := sm.ActivePlayer.Player.IntPos()
-				fmt.Printf("%p: %v, %v\n", sm.ActivePlayer.Player, x,y)
 				cidxs := World.GetPlayerChunks(sm.ActivePlayer.Player)
 				World.UpdateChunks(cidxs)
 				sm.SetEntitiesFromChunks(World.Chunks, cidxs...)
@@ -85,18 +92,21 @@ func Start() {
 		}
 		
 		if PlayersChanged {
+			UpdateAllPositions = true
 			for _,sm := range(SmPerCon) {
 				sm.GetSyncPlayersFromWorld(World)
 			}
 			PlayersChanged = false
 		}
-		out := World.PrintPlayerPos()
+		out := World.PrintPlayers()
 		if len(out) > 0 {
 			fmt.Println("waiting: ", out)
 		}
 		//playerJoining.Lock()
 		ServerManager.UpdateSyncVars()
 		Server.WaitForAllConfirmations()
+		close(*ActionReset)
+		*ActionReset = make(chan bool)
 		//playerJoining.Unlock()
 		
 		t := time.Now().Sub(st)
