@@ -1,2 +1,0 @@
-spriteWidth:    16
-updatePeriod:   15

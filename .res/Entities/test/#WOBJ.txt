@@ -1,8 +1,0 @@
-squareSize:     16
-spriteWidth:    16
-updatePeriod:   6
-hitBoxWidth:    1
-hitBoxHeight:   1
-XPos:           0
-YPos:           0
-layer:          0

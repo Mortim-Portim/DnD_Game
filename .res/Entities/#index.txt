@@ -1,7 +1,3 @@
 Dwarf
-Elv
-Goblin
-Half-Elv
 Halfling
-Human
-Ork
+Slime

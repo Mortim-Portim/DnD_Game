@@ -1,8 +1,4 @@
 idle_L
 idle_R
-idle_L
-idle_R
-running_L
-running_R
 running_L
 running_R
