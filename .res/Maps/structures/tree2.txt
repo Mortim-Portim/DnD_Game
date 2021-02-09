@@ -1,8 +1,8 @@
 spriteWidth:    32
 updatePeriod:   0
-hitBoxWidth:    1
-hitBoxHeight:   1
+hitBoxWidth:    2
+hitBoxHeight:   2
 Collides:       true
 squareSize:     16
-layer:			0
-understandable: true
+layer:			-9
+understandable: false

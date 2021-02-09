@@ -1,3 +1,9 @@
 Dwarf
+Elv
+Goblin
+Half-Elv
 Halfling
+Human
+Ork
+Rabbit
 Slime

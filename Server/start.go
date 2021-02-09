@@ -23,9 +23,9 @@ func Start() {
 	flag.Parse()
 	done := make(chan bool)
 	wrld, err := GE.LoadWorldStructure(0, 0, 1920, 1080, *world_file, F_TILES, F_STRUCTURES)
-	wrld.SetLightStats(30, 255, 2)
-	wrld.SetDisplayWH(32,18)
 	CheckErr(err)
+	wrld.SetLightStats(30, 255, 0.1)
+	wrld.SetDisplayWH(32,18)
 	wrld_bytes, err = wrld.ToBytes()
 	CheckErr(err)
 	
@@ -98,10 +98,10 @@ func Start() {
 			}
 			PlayersChanged = false
 		}
-		out := World.PrintPlayers()
-		if len(out) > 0 {
-			fmt.Println("waiting: ", out)
-		}
+//		out := World.PrintPlayers()
+//		if len(out) > 0 {
+//			fmt.Println("waiting: ", out)
+//		}
 		//playerJoining.Lock()
 		ServerManager.UpdateSyncVars()
 		Server.WaitForAllConfirmations()

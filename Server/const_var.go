@@ -36,7 +36,7 @@ const (
 
 var (
 	port       = flag.String("port", "8080", "Port of the server to run on")
-	world_file = flag.String("world", "./.res/Maps/Worlds/TestMap3.map", "path of the world that the server is going to host")
+	world_file = flag.String("world", "./.res/Maps/Worlds/benTestMap1.map", "path of the world that the server is going to host")
 	Server     *GC.Server
 	ServerManager *GC.ServerManager
 	SmallWorld *TNE.SmallWorld

@@ -1,0 +1,4 @@
+idle_L
+idle_R
+idle_R
+idle_R

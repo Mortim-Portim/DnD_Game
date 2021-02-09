@@ -1,3 +1,16 @@
 house1
-tree2big
+house2
 tree2
+tree2big
+bush
+bushberie
+mushrooms1
+bloodbush
+bushmagic
+magicflower
+magictree
+magmastone
+wall
+tower
+hud
+stables
