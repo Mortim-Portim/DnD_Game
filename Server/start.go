@@ -63,6 +63,8 @@ func Start() {
 	}()
 	time.Sleep(time.Second)
 	
+	WaitingForConfirms = make(map[*ws.Conn]bool)
+	
 	for true {
 		st := time.Now()
 		
@@ -103,8 +105,22 @@ func Start() {
 //			fmt.Println("waiting: ", out)
 //		}
 		//playerJoining.Lock()
-		ServerManager.UpdateSyncVars()
-		Server.WaitForAllConfirmations()
+		
+		for c,h := range(ServerManager.Handler) {
+			WaitingForConfirmsLock.Lock()
+			if !WaitingForConfirms[c] {
+				conn := c; handler := h
+				WaitingForConfirms[conn] = true
+				go func() {
+					handler.UpdateSyncVars()
+					Server.WaitForConfirmations(conn)
+					WaitingForConfirmsLock.Lock()
+					WaitingForConfirms[conn] = false
+					WaitingForConfirmsLock.Unlock()
+				}()
+			}
+			WaitingForConfirmsLock.Unlock()
+		}
 		close(*ActionReset)
 		*ActionReset = make(chan bool)
 		//playerJoining.Unlock()
@@ -134,7 +150,9 @@ func ServerNewConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	newSM.Register(ServerManager, c)
 	newSM.SetWorldStruct(newSM.Struct)
 	SmPerCon[c] = newSM
-	
+	WaitingForConfirmsLock.Lock()
+	WaitingForConfirms[c] = false
+	WaitingForConfirmsLock.Unlock()
 	playerJoining.Unlock()
 }
 func ServerCloseConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
