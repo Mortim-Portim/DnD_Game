@@ -45,9 +45,8 @@ var (
 	PlayersChanged, UpdateAllPositions bool
 	ActionReset *chan bool
 	
-	playerJoining, WaitingForConfirmsLock sync.Mutex
+	playerJoining sync.Mutex
 	
 	SmPerCon map[*ws.Conn]*TNE.SmallWorld
-	WaitingForConfirms map[*ws.Conn]bool
 	wrld_bytes []byte
 )
