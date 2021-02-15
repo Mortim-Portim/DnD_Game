@@ -66,15 +66,11 @@ func Start() {
 	for true {
 		st := time.Now()
 		
+		playerJoining.Lock()
 		*SmallWorld.FrameCounter ++
 		SmallWorld.Struct.UpdateLightLevel(1)
 		SmallWorld.Struct.UpdateAllLightsIfNecassary()
 		World.UpdateAllPlayer()
-		
-		if UpdateAllPositions {
-			World.UpdateAllPos()
-			UpdateAllPositions = false
-		}
 		
 		for _,sm := range(SmPerCon) {
 			ok, pl := sm.HasNewActivePlayer()
@@ -88,26 +84,23 @@ func Start() {
 				World.UpdateChunks(cidxs)
 				sm.SetEntitiesFromChunks(World.Chunks, cidxs...)
 			}
-			sm.UpdateVars()
 		}
-		
 		if PlayersChanged {
-			UpdateAllPositions = true
+			World.UpdateAllPos()
 			for _,sm := range(SmPerCon) {
 				sm.GetSyncPlayersFromWorld(World)
 			}
 			PlayersChanged = false
 		}
-//		out := World.PrintPlayers()
-//		if len(out) > 0 {
-//			fmt.Println("waiting: ", out)
-//		}
-		//playerJoining.Lock()
+		for _,sm := range(SmPerCon) {
+			sm.UpdateVars()
+		}
+		
 		ServerManager.UpdateSyncVarsBuffered()
 		close(*ActionReset)
 		*ActionReset = make(chan bool)
-		//playerJoining.Unlock()
 		
+		playerJoining.Unlock()
 		t := time.Now().Sub(st)
 		if t < delay {
 			time.Sleep(delay-t)
@@ -132,18 +125,28 @@ func ServerNewConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	newSM.Register(ServerManager, c)
 	newSM.SetWorldStruct(newSM.Struct)
 	SmPerCon[c] = newSM
+	OnPlayerChangeWithDelay(time.Second)
 	playerJoining.Unlock()
 }
 func ServerCloseConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Println("Client Disconnected: ", c.RemoteAddr().String())
+	
+	playerJoining.Lock()
 	if sm, ok := SmPerCon[c]; ok && sm.ActivePlayer.HasPlayer() {
 		fmt.Printf("Removing Player %p from the world\n", SmPerCon[c].ActivePlayer.Player)
 		World.RemovePlayer(SmPerCon[c].ActivePlayer.Player)
 	}
 	delete(SmPerCon, c)
-	PlayersChanged = true
+	OnPlayerChangeWithDelay(time.Second)
+	playerJoining.Unlock()
+	
 }
-
+func OnPlayerChangeWithDelay(delay time.Duration) {
+	go func() {
+		time.Sleep(delay)
+		PlayersChanged = true
+	}()
+}
 func CheckErr(err error) {
 	if err != nil {
 		panic(err)
