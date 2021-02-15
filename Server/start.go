@@ -86,7 +86,7 @@ func Start() {
 			}
 		}
 		if PlayersChanged {
-			World.UpdateAllPos()
+			//World.UpdateAllPos()
 			for _,sm := range(SmPerCon) {
 				sm.GetSyncPlayersFromWorld(World)
 			}
@@ -125,7 +125,7 @@ func ServerNewConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	newSM.Register(ServerManager, c)
 	newSM.SetWorldStruct(newSM.Struct)
 	SmPerCon[c] = newSM
-	OnPlayerChangeWithDelay(time.Second)
+	PlayersChanged = true
 	playerJoining.Unlock()
 }
 func ServerCloseConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
@@ -137,15 +137,9 @@ func ServerCloseConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 		World.RemovePlayer(SmPerCon[c].ActivePlayer.Player)
 	}
 	delete(SmPerCon, c)
-	OnPlayerChangeWithDelay(time.Second)
+	PlayersChanged = true
 	playerJoining.Unlock()
 	
-}
-func OnPlayerChangeWithDelay(delay time.Duration) {
-	go func() {
-		time.Sleep(delay)
-		PlayersChanged = true
-	}()
 }
 func CheckErr(err error) {
 	if err != nil {
