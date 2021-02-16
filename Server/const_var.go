@@ -37,6 +37,8 @@ const (
 var (
 	port       = flag.String("port", "8080", "Port of the server to run on")
 	world_file = flag.String("world", "./.res/Maps/Worlds/benTestMap1.map", "path of the world that the server is going to host")
+	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+	memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 	Server     *GC.Server
 	ServerManager *GC.ServerManager
 	SmallWorld *TNE.SmallWorld

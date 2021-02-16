@@ -18,9 +18,16 @@ import (
 
 const FPS = 30
 const delay = time.Second/FPS
-
+func onUnexpectedError() {
+	if r := recover(); r!= nil {
+		CloseServer()
+		panic(fmt.Sprintf("unexpected Error: %v", r))
+	}
+}
 func Start() {
 	flag.Parse()
+	GE.StartProfiling(cpuprofile)
+	defer onUnexpectedError()
 	done := make(chan bool)
 	wrld, err := GE.LoadWorldStructure(0, 0, 1920, 1080, *world_file, F_TILES, F_STRUCTURES)
 	CheckErr(err)
@@ -58,7 +65,7 @@ func Start() {
 	signal.Notify(interrupt, os.Interrupt)
 	go func() {
 		<-interrupt
-		log.Fatal("User Termination")
+		CloseServer()
 		return
 	}()
 	time.Sleep(time.Second)
@@ -106,10 +113,12 @@ func Start() {
 			time.Sleep(delay-t)
 		}
 	}
-	
 	<-done
 }
-
+func CloseServer() {
+	GE.StopProfiling(cpuprofile, memprofile)
+	log.Fatal("Termination")
+}
 func ServerInput(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Printf("Client %s send msg of len(%v): '%v'\n", c.RemoteAddr().String(), len(msg), msg)
 }
