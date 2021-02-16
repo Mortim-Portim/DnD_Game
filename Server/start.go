@@ -12,7 +12,7 @@ import (
 	"github.com/mortim-portim/GraphEng/GE"
 	cmp "github.com/mortim-portim/GraphEng/Compression"
 	"github.com/mortim-portim/TN_Engine/TNE"
-
+	"runtime/debug"
 	ws "github.com/gorilla/websocket"
 )
 
@@ -20,8 +20,7 @@ const FPS = 30
 const delay = time.Second/FPS
 func onUnexpectedError() {
 	if r := recover(); r!= nil {
-		CloseServer()
-		panic(fmt.Sprintf("unexpected Error: %v", r))
+		CloseServer("unexpected Error:", r, "\n", string(debug.Stack()))
 	}
 }
 func Start() {
@@ -115,9 +114,9 @@ func Start() {
 	}
 	<-done
 }
-func CloseServer() {
+func CloseServer(msg ...interface{}) {
 	GE.StopProfiling(cpuprofile, memprofile)
-	log.Fatal("Termination")
+	log.Fatal("Termination: ", fmt.Sprint(msg...))
 }
 func ServerInput(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Printf("Client %s send msg of len(%v): '%v'\n", c.RemoteAddr().String(), len(msg), msg)
