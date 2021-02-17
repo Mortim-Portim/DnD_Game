@@ -45,7 +45,6 @@ var (
 	
 	World *TNE.World
 	PlayersChanged, UpdateAllPositions bool
-	ActionReset *chan bool
 	
 	playerJoining sync.Mutex
 	

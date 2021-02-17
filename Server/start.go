@@ -24,6 +24,7 @@ func onUnexpectedError() {
 	}
 }
 func Start() {
+	playerJoining.Lock()
 	flag.Parse()
 	GE.StartProfiling(cpuprofile)
 	defer onUnexpectedError()
@@ -35,9 +36,7 @@ func Start() {
 	wrld_bytes, err = wrld.ToBytes()
 	CheckErr(err)
 	
-	c := make(chan bool)
-	ActionReset = &c
-	sm,err := TNE.GetSmallWorld(0, 0, 1920, 1080, F_TILES, F_STRUCTURES, F_ENTITY, ActionReset)
+	sm,err := TNE.GetSmallWorld(0, 0, 1920, 1080, F_TILES, F_STRUCTURES, F_ENTITY)
 	CheckErr(err)
 	
 	sm.SetWorldStruct(wrld)
@@ -48,7 +47,7 @@ func Start() {
 	InitializeEntities(World)
 
 	GC.InitSyncVarStandardTypes()
-	GC.PRINT_LOG = false
+	GC.PRINT_LOG_PRIORITY = 3
 	Server = GC.GetNewServer()
 	ServerManager = GC.GetServerManager(Server)
 	ServerManager.InputHandler = ServerInput
@@ -60,6 +59,8 @@ func Start() {
 	fmt.Println("Running on:", ipAddrS)
 	Server.Run(ipAddrS)
 	
+	Server.InputWaiting = true
+	
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 	go func() {
@@ -68,16 +69,24 @@ func Start() {
 		return
 	}()
 	time.Sleep(time.Second)
+	playerJoining.Unlock()
 	
 	for true {
+		//fmt.Println("---------------------------------------Stop time")
 		st := time.Now()
 		
 		playerJoining.Lock()
+		
+		//fmt.Println("---------------------------------------Receive Input first")
+		Server.HandleInput()
+		
+		//fmt.Println("---------------------------------------Update World")
 		*SmallWorld.FrameCounter ++
 		SmallWorld.Struct.UpdateLightLevel(1)
 		SmallWorld.Struct.UpdateAllLightsIfNecassary()
 		World.UpdateAllPlayer()
 		
+		//fmt.Println("---------------------------------------Update smallworlds with entities")
 		for _,sm := range(SmPerCon) {
 			ok, pl := sm.HasNewActivePlayer()
 			if ok {
@@ -91,6 +100,7 @@ func Start() {
 				sm.SetEntitiesFromChunks(World.Chunks, cidxs...)
 			}
 		}
+		//fmt.Println("---------------------------------------Update the player of the smallworlds")
 		if PlayersChanged {
 			World.UpdateAllPos()
 			for _,sm := range(SmPerCon) {
@@ -98,15 +108,29 @@ func Start() {
 			}
 			PlayersChanged = false
 		}
+		//fmt.Println("---------------------------------------Set SyncVars of the smallworlds")
 		for _,sm := range(SmPerCon) {
 			sm.UpdateVars()
 		}
 		
+		//fmt.Println("---------------------------------------send syncvars buffered")
 		ServerManager.UpdateSyncVarsBuffered()
-		close(*ActionReset)
-		*ActionReset = make(chan bool)
+		
+		msg := World.PrintPlayers()
+		if len(msg) > 0 {
+			fmt.Println(msg)
+		}
+		//fmt.Println("---------------------------------------reset applied actions")
+		World.ResetActions()
+		
+		msg = World.PrintPlayers()
+		if len(msg) > 0 {
+			fmt.Println(msg)
+		}
 		
 		playerJoining.Unlock()
+		
+		//fmt.Println("---------------------------------------Wait up to 33.33 ms (to update at 30 FPS)")
 		t := time.Now().Sub(st)
 		if t < delay {
 			time.Sleep(delay-t)
@@ -127,11 +151,16 @@ func ServerNewConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	playerJoining.Lock()
 	data := append([]byte{GC.BINARYMSG}, []byte(TNE.NumberOfSVACIDs_Msg)...)
 	data = append(data, cmp.Int16ToBytes(int16(TNE.GetSVACID_Count()))...)
-	s.Send(data, c)
+	s.SendBuffered(data, c)
 	s.WaitForConfirmation(c)
+	
 	newSM := SmallWorld.New()
 	newSM.Register(ServerManager, c)
+	
 	newSM.SetWorldStruct(newSM.Struct)
+	ServerManager.UpdateSyncVarsNormal()
+	s.WaitForConfirmation(c)
+	
 	SmPerCon[c] = newSM
 	PlayersChanged = true
 	playerJoining.Unlock()
