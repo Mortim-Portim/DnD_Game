@@ -92,7 +92,7 @@ func Start() {
 			}
 		}
 		if PlayersChanged {
-			//World.UpdateAllPos()
+			World.UpdateAllPos()
 			for _,sm := range(SmPerCon) {
 				sm.GetSyncPlayersFromWorld(World)
 			}
