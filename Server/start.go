@@ -31,7 +31,7 @@ func Start() {
 	done := make(chan bool)
 	wrld, err := GE.LoadWorldStructure(0, 0, 1920, 1080, *world_file, F_TILES, F_STRUCTURES)
 	CheckErr(err)
-	wrld.SetLightStats(30, 255, 0.1)
+	wrld.SetLightStats(220, GE.GetStandardTimeToLvFunc(30, 220))
 	wrld.SetDisplayWH(32,18)
 	wrld_bytes, err = wrld.ToBytes()
 	CheckErr(err)
@@ -82,8 +82,7 @@ func Start() {
 		
 		//fmt.Println("---------------------------------------Update World")
 		*SmallWorld.FrameCounter ++
-		SmallWorld.Struct.UpdateLightLevel(1)
-		SmallWorld.Struct.UpdateAllLightsIfNecassary()
+		World.UpdateLights(time.Minute/FPS)
 		World.UpdateAllPlayer()
 		
 		//fmt.Println("---------------------------------------Update smallworlds with entities")
@@ -116,17 +115,12 @@ func Start() {
 		//fmt.Println("---------------------------------------send syncvars buffered")
 		ServerManager.UpdateSyncVarsBuffered()
 		
-		msg := World.PrintPlayers()
-		if len(msg) > 0 {
+		msg, num := World.Print(false)
+		if num > 0 {
 			fmt.Println(msg)
 		}
 		//fmt.Println("---------------------------------------reset applied actions")
 		World.ResetActions()
-		
-		msg = World.PrintPlayers()
-		if len(msg) > 0 {
-			fmt.Println(msg)
-		}
 		
 		playerJoining.Unlock()
 		

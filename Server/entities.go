@@ -37,14 +37,14 @@ func SpawnEntity(name string, w *TNE.World, x, y float64, ufnc TNE.EntityUpdater
 	w.AddEntity(ent)
 }
 func InitializeEntities(w *TNE.World) {
-//	u_r := &EU_Random_Moves{UpdatePeriodMin:40, UpdatePeriodMax:100, MovementMin:1, MovementMax:4, FrmsMin:20, FrmsMax:40}
-//	u_r.Reset()
-//	
-//	xstart := 9; ystart := 9
-//	crNames := w.Ef.EntityNames()
-//	for x,name := range(crNames) {
-//		for y := 0; y < 1; y ++ {
-//			SpawnEntity(name, w, float64(x+xstart), float64(y+ystart), nil)
-//		}
-//	}
+	u_r := &EU_Random_Moves{UpdatePeriodMin:40, UpdatePeriodMax:100, MovementMin:1, MovementMax:4, FrmsMin:20, FrmsMax:40}
+	u_r.Reset()
+	
+	xstart := 9; ystart := 9
+	crNames := w.Ef.EntityNames()
+	for x,name := range(crNames) {
+		for y := 0; y < 1; y ++ {
+			SpawnEntity(name, w, float64(x+xstart), float64(y+ystart), u_r.Copy())
+		}
+	}
 }
