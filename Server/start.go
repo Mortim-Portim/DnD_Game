@@ -33,8 +33,7 @@ func Start() {
 	CheckErr(err)
 	wrld.SetLightStats(220, GE.GetStandardTimeToLvFunc(30, 220))
 	wrld.SetDisplayWH(32,18)
-	wrld_bytes, err = wrld.ToBytes()
-	CheckErr(err)
+	wrld_bytes = wrld.ToBytes()
 	
 	sm,err := TNE.GetSmallWorld(0, 0, 1920, 1080, F_TILES, F_STRUCTURES, F_ENTITY)
 	CheckErr(err)
