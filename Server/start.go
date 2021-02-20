@@ -3,23 +3,25 @@ package Server
 import (
 	"flag"
 	"fmt"
-	"time"
-	"net"
 	"log"
+	"net"
 	"os"
 	"os/signal"
-	"github.com/mortim-portim/GameConn/GC"
-	"github.com/mortim-portim/GraphEng/GE"
-	cmp "github.com/mortim-portim/GraphEng/Compression"
-	"github.com/mortim-portim/TN_Engine/TNE"
 	"runtime/debug"
+	"time"
+
 	ws "github.com/gorilla/websocket"
+	"github.com/mortim-portim/GameConn/GC"
+	cmp "github.com/mortim-portim/GraphEng/Compression"
+	"github.com/mortim-portim/GraphEng/GE"
+	"github.com/mortim-portim/TN_Engine/TNE"
 )
 
 const FPS = 30
-const delay = time.Second/FPS
+const delay = time.Second / FPS
+
 func onUnexpectedError() {
-	if r := recover(); r!= nil {
+	if r := recover(); r != nil {
 		CloseServer("unexpected Error:", r, "\n", string(debug.Stack()))
 	}
 }
@@ -30,19 +32,28 @@ func Start() {
 	defer onUnexpectedError()
 	done := make(chan bool)
 	wrld, err := GE.LoadWorldStructure(0, 0, 1920, 1080, *world_file, F_TILES, F_STRUCTURES)
-	CheckErr(err)
+	if err != nil {
+		fmt.Println("Error loading worldstructure generating one")
+		wrld = GE.GetWorldStructure(0, 0, 1920, 1080, 100, 100, 32, 18)
+		wrld.LoadTiles(F_TILES)
+		wrld.LoadStructureObjs(F_STRUCTURES)
+		wrld.TileMat.FillAll(1)
+		wrld.SetMiddle(0, 0, true)
+
+	}
 	wrld.SetLightStats(220, GE.GetStandardTimeToLvFunc(30, 220))
-	wrld.SetDisplayWH(32,18)
+	wrld.SetDisplayWH(32, 18)
+
 	wrld_bytes = wrld.ToBytes()
-	
-	sm,err := TNE.GetSmallWorld(0, 0, 1920, 1080, F_TILES, F_STRUCTURES, F_ENTITY)
+
+	sm, err := TNE.GetSmallWorld(0, 0, 1920, 1080, F_TILES, F_STRUCTURES, F_ENTITY)
 	CheckErr(err)
-	
+
 	sm.SetWorldStruct(wrld)
 	SmallWorld = sm
 	SmPerCon = make(map[*ws.Conn]*TNE.SmallWorld)
-	
-	World = TNE.GetWorld(&TNE.WorldParams{2,SmallWorld.Ef,SmallWorld.FrameCounter,wrld}, "./test")
+
+	World = TNE.GetWorld(&TNE.WorldParams{2, SmallWorld.Ef, SmallWorld.FrameCounter, wrld}, "./test")
 	InitializeEntities(World)
 
 	GC.InitSyncVarStandardTypes()
@@ -57,9 +68,9 @@ func Start() {
 	ipAddrS := fmt.Sprintf("%s:%s", ipAddr, *port)
 	fmt.Println("Running on:", ipAddrS)
 	Server.Run(ipAddrS)
-	
+
 	Server.InputWaiting = true
-	
+
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 	go func() {
@@ -69,23 +80,23 @@ func Start() {
 	}()
 	time.Sleep(time.Second)
 	playerJoining.Unlock()
-	
+
 	for true {
 		//fmt.Println("---------------------------------------Stop time")
 		st := time.Now()
-		
+
 		playerJoining.Lock()
-		
+
 		//fmt.Println("---------------------------------------Receive Input first")
 		Server.HandleInput()
-		
+
 		//fmt.Println("---------------------------------------Update World")
-		*SmallWorld.FrameCounter ++
-		World.UpdateLights(time.Minute/FPS)
+		*SmallWorld.FrameCounter++
+		World.UpdateLights(time.Minute / FPS)
 		World.UpdateAllPlayer()
-		
+
 		//fmt.Println("---------------------------------------Update smallworlds with entities")
-		for _,sm := range(SmPerCon) {
+		for _, sm := range SmPerCon {
 			ok, pl := sm.HasNewActivePlayer()
 			if ok {
 				World.AddPlayer(pl)
@@ -101,32 +112,32 @@ func Start() {
 		//fmt.Println("---------------------------------------Update the player of the smallworlds")
 		if PlayersChanged {
 			World.UpdateAllPos()
-			for _,sm := range(SmPerCon) {
+			for _, sm := range SmPerCon {
 				sm.GetSyncPlayersFromWorld(World)
 			}
 			PlayersChanged = false
 		}
 		//fmt.Println("---------------------------------------Set SyncVars of the smallworlds")
-		for _,sm := range(SmPerCon) {
+		for _, sm := range SmPerCon {
 			sm.UpdateVars()
 		}
-		
+
 		//fmt.Println("---------------------------------------send syncvars buffered")
 		ServerManager.UpdateSyncVarsBuffered()
-		
+
 		msg, num := World.Print(false)
 		if num > 0 {
 			fmt.Println(msg)
 		}
 		//fmt.Println("---------------------------------------reset applied actions")
 		World.ResetActions()
-		
+
 		playerJoining.Unlock()
-		
+
 		//fmt.Println("---------------------------------------Wait up to 33.33 ms (to update at 30 FPS)")
 		t := time.Now().Sub(st)
 		if t < delay {
-			time.Sleep(delay-t)
+			time.Sleep(delay - t)
 		}
 	}
 	<-done
@@ -140,27 +151,27 @@ func ServerInput(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 }
 func ServerNewConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Println("New Client Connected: ", c.RemoteAddr().String())
-	
+
 	playerJoining.Lock()
 	data := append([]byte{GC.BINARYMSG}, []byte(TNE.NumberOfSVACIDs_Msg)...)
 	data = append(data, cmp.Int16ToBytes(int16(TNE.GetSVACID_Count()))...)
 	s.SendBuffered(data, c)
 	s.WaitForConfirmation(c)
-	
+
 	newSM := SmallWorld.New()
 	newSM.Register(ServerManager, c)
-	
+
 	newSM.SetWorldStruct(newSM.Struct)
 	ServerManager.UpdateSyncVarsNormal()
 	s.WaitForConfirmation(c)
-	
+
 	SmPerCon[c] = newSM
 	PlayersChanged = true
 	playerJoining.Unlock()
 }
 func ServerCloseConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Println("Client Disconnected: ", c.RemoteAddr().String())
-	
+
 	playerJoining.Lock()
 	if sm, ok := SmPerCon[c]; ok && sm.ActivePlayer.HasPlayer() {
 		fmt.Printf("Removing Player %p from the world\n", SmPerCon[c].ActivePlayer.Player)
@@ -169,7 +180,7 @@ func ServerCloseConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	delete(SmPerCon, c)
 	PlayersChanged = true
 	playerJoining.Unlock()
-	
+
 }
 func CheckErr(err error) {
 	if err != nil {
