@@ -17,8 +17,9 @@ import (
 	"github.com/mortim-portim/TN_Engine/TNE"
 )
 
-const FPS = 30
-const delay = time.Second / FPS
+var FPS = TNE.FPS
+
+var delay = time.Duration(float64(time.Second) / FPS)
 
 func onUnexpectedError() {
 	if r := recover(); r != nil {
@@ -92,7 +93,7 @@ func Start() {
 
 		//fmt.Println("---------------------------------------Update World")
 		*SmallWorld.FrameCounter++
-		World.UpdateLights(time.Minute / FPS)
+		World.UpdateLights(time.Duration(float64(time.Minute) / FPS))
 		World.UpdateAllPlayer()
 
 		//fmt.Println("---------------------------------------Update smallworlds with entities")

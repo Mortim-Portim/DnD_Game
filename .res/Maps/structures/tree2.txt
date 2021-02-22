@@ -1,7 +1,7 @@
 spriteWidth:    32
-updatePeriod:   0
-hitBoxWidth:    2
-hitBoxHeight:   2
+fps:            0
+hitBoxWidth:    0.5
+hitBoxHeight:   0.5
 Collides:       true
 squareSize:     16
 layer:			-9
