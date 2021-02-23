@@ -24,7 +24,7 @@ func (u *EU_Random_Moves) Update(e *TNE.Entity, world *TNE.World) {
 		speed := TNE.RandomFloat(u.SpeedMin, u.SpeedMax)
 		e.ChangeOrientation(dir)
 		e.Speed = speed
-		e.Move(l)
+		e.MoveTiles(l)
 		u.Reset()
 		u.framesSinceLastUpdate = -1
 	}

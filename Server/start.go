@@ -29,6 +29,7 @@ func onUnexpectedError() {
 func Start() {
 	playerJoining.Lock()
 	flag.Parse()
+	GE.Init("", FPS)
 	GE.StartProfiling(cpuprofile)
 	defer onUnexpectedError()
 	done := make(chan bool)
@@ -42,16 +43,18 @@ func Start() {
 		wrld.SetMiddle(0, 0, true)
 
 	}
-	wrld.SetLightStats(220, GE.GetStandardTimeToLvFunc(30, 220))
+	wrld.SetLightStats(30, 220)
 	wrld.SetDisplayWH(32, 18)
 
 	wrld_bytes = wrld.ToBytes()
 
 	sm, err := TNE.GetSmallWorld(0, 0, 1920, 1080, F_TILES, F_STRUCTURES, F_ENTITY)
 	CheckErr(err)
-
 	sm.SetWorldStruct(wrld)
+	sm.FrameChanSendPeriod = int(FPS * 20)
+	sm.SetTimePerFrame(int64(float64(time.Hour) / FPS))
 	SmallWorld = sm
+
 	SmPerCon = make(map[*ws.Conn]*TNE.SmallWorld)
 
 	World = TNE.GetWorld(&TNE.WorldParams{2, SmallWorld.Ef, SmallWorld.FrameCounter, wrld}, "./test")
@@ -93,7 +96,7 @@ func Start() {
 
 		//fmt.Println("---------------------------------------Update World")
 		*SmallWorld.FrameCounter++
-		World.UpdateLights(time.Duration(float64(time.Minute) / FPS))
+		World.UpdateLights(time.Duration(SmallWorld.TimePerFrame))
 		World.UpdateAllPlayer()
 
 		//fmt.Println("---------------------------------------Update smallworlds with entities")
@@ -126,10 +129,10 @@ func Start() {
 		//fmt.Println("---------------------------------------send syncvars buffered")
 		ServerManager.UpdateSyncVarsBuffered()
 
-		msg, num := World.Print(false)
-		if num > 0 {
-			fmt.Println(msg)
-		}
+		// msg, num := World.Print(false)
+		// if num > 0 {
+		// 	fmt.Println(msg)
+		// }
 		//fmt.Println("---------------------------------------reset applied actions")
 		World.ResetActions()
 
@@ -148,7 +151,7 @@ func CloseServer(msg ...interface{}) {
 	log.Fatal("Termination: ", fmt.Sprint(msg...))
 }
 func ServerInput(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
-	fmt.Printf("Client %s send msg of len(%v): '%v'\n", c.RemoteAddr().String(), len(msg), msg)
+	//fmt.Printf("Client %s send msg of len(%v): '%v'\n", c.RemoteAddr().String(), len(msg), msg)
 }
 func ServerNewConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Println("New Client Connected: ", c.RemoteAddr().String())
@@ -163,6 +166,7 @@ func ServerNewConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	newSM.Register(ServerManager, c)
 
 	newSM.SetWorldStruct(newSM.Struct)
+	newSM.SetTimePerFrame(SmallWorld.TimePerFrame)
 	ServerManager.UpdateSyncVarsNormal()
 	s.WaitForConfirmation(c)
 
