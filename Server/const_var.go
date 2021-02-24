@@ -1,8 +1,9 @@
 package Server
 
 import (
-	"sync"
 	"flag"
+	"sync"
+
 	ws "github.com/gorilla/websocket"
 	"github.com/mortim-portim/GameConn/GC"
 	"github.com/mortim-portim/TN_Engine/TNE"
@@ -28,26 +29,28 @@ const (
 	F_BUTTONS       = F_GUI + "/Buttons"
 	F_CONNECTING    = F_GUI + "/Connecting"
 
-	F_ENTITY   = RES + "/Entities"
+	F_ENTITY = RES + "/Entities"
 
 	MAP_REQUEST = GC.MESSAGE_TYPES + 0
 	CHAR_SEND   = GC.MESSAGE_TYPES + 1
 )
 
 var (
-	port       = flag.String("port", "8080", "Port of the server to run on")
-	world_file = flag.String("world", "./.res/Maps/Worlds/benTestMap1.map", "path of the world that the server is going to host")
-	cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
-	memprofile = flag.String("memprofile", "", "write memory profile to `file`")
-	Server     *GC.Server
+	port          = flag.String("port", "8080", "Port of the server to run on")
+	world_file    = flag.String("world", "./.res/Maps/Worlds/benTestMap1.map", "path of the world that the server is going to host")
+	cpuprofile    = flag.String("cpuprofile", "", "write cpu profile to `file`")
+	memprofile    = flag.String("memprofile", "", "write memory profile to `file`")
+	Server        *GC.Server
 	ServerManager *GC.ServerManager
-	SmallWorld *TNE.SmallWorld
-	
-	World *TNE.World
+	SmallWorld    *TNE.SmallWorld
+
+	World                              *TNE.World
 	PlayersChanged, UpdateAllPositions bool
-	
+
 	playerJoining sync.Mutex
-	
-	SmPerCon map[*ws.Conn]*TNE.SmallWorld
+
+	SmPerCon   map[*ws.Conn]*TNE.SmallWorld
 	wrld_bytes []byte
+
+	EntityIDFactory = &TNE.UniqueIDFactory{}
 )

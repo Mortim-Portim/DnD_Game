@@ -59,6 +59,7 @@ func Start() {
 
 	World = TNE.GetWorld(&TNE.WorldParams{2, SmallWorld.Ef, SmallWorld.FrameCounter, wrld}, "./test")
 	InitializeEntities(World)
+	SmallWorld.World = World
 
 	GC.InitSyncVarStandardTypes()
 	GC.PRINT_LOG_PRIORITY = 3
@@ -104,6 +105,7 @@ func Start() {
 			ok, pl := sm.HasNewActivePlayer()
 			if ok {
 				World.AddPlayer(pl)
+				sm.SetActivePlayerID(int16(EntityIDFactory.GetID(0, 32768)))
 				fmt.Printf("New active Player: %p\n", pl)
 				PlayersChanged = true
 			}
@@ -129,10 +131,10 @@ func Start() {
 		//fmt.Println("---------------------------------------send syncvars buffered")
 		ServerManager.UpdateSyncVarsBuffered()
 
-		// msg, num := World.Print(false)
-		// if num > 0 {
-		// 	fmt.Println(msg)
-		// }
+		msg, num := World.Print(false)
+		if num > 0 {
+			fmt.Println(msg)
+		}
 		//fmt.Println("---------------------------------------reset applied actions")
 		World.ResetActions()
 
@@ -180,6 +182,7 @@ func ServerCloseConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	playerJoining.Lock()
 	if sm, ok := SmPerCon[c]; ok && sm.ActivePlayer.HasPlayer() {
 		fmt.Printf("Removing Player %p from the world\n", SmPerCon[c].ActivePlayer.Player)
+		EntityIDFactory.AddID(int(SmPerCon[c].ActivePlayer.ID))
 		World.RemovePlayer(SmPerCon[c].ActivePlayer.Player)
 	}
 	delete(SmPerCon, c)
