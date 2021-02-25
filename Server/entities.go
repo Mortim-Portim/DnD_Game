@@ -17,7 +17,7 @@ func (u *EU_Random_Moves) Copy() TNE.EntityUpdater {
 func (u *EU_Random_Moves) Reset() {
 	u.nextUpdate = TNE.RandomInt(u.UpdatePeriodMin, u.UpdatePeriodMax)
 }
-func (u *EU_Random_Moves) Update(e *TNE.Entity, world *TNE.World) {
+func (u *EU_Random_Moves) Update(e *TNE.Entity, world *TNE.SmallWorld) {
 	if u.framesSinceLastUpdate == u.nextUpdate {
 		l := TNE.RandomFloat(u.MovementMin, u.MovementMax)
 		dir := TNE.GetNewRandomDirection()

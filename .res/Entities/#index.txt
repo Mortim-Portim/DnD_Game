@@ -7,3 +7,6 @@ Human
 Ork
 Rabbit
 Slime
+Amnon
+Perrin
+Mellon

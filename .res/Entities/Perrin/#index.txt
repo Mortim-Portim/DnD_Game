@@ -1,0 +1,6 @@
+idle_L
+idle_R
+running_L
+running_R
+attack_L
+attack_R

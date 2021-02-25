@@ -1,0 +1,2 @@
+spriteWidth:16
+fps:5

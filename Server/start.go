@@ -57,9 +57,8 @@ func Start() {
 
 	SmPerCon = make(map[*ws.Conn]*TNE.SmallWorld)
 
-	World = TNE.GetWorld(&TNE.WorldParams{2, SmallWorld.Ef, SmallWorld.FrameCounter, wrld}, "./test")
+	World = TNE.GetWorld(&TNE.WorldParams{2, SmallWorld.Ef, SmallWorld.FrameCounter, wrld}, "./test", SmallWorld)
 	InitializeEntities(World)
-	SmallWorld.World = World
 
 	for _, AttackParam := range TNE.Attacks {
 		img := GE.GetEmptyImage(1, 1)
