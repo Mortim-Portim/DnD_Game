@@ -61,6 +61,11 @@ func Start() {
 	InitializeEntities(World)
 	SmallWorld.World = World
 
+	for _, AttackParam := range TNE.Attacks {
+		img := GE.GetEmptyImage(1, 1)
+		AttackParam.Init(img)
+	}
+
 	GC.InitSyncVarStandardTypes()
 	GC.PRINT_LOG_PRIORITY = 3
 	Server = GC.GetNewServer()
