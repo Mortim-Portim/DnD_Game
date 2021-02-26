@@ -66,7 +66,7 @@ func Start() {
 	}
 
 	GC.InitSyncVarStandardTypes()
-	GC.PRINT_LOG_PRIORITY = 3
+	GC.PRINT_LOG_PRIORITY = 5
 	Server = GC.GetNewServer()
 	ServerManager = GC.GetServerManager(Server)
 	ServerManager.InputHandler = ServerInput
@@ -135,10 +135,10 @@ func Start() {
 		//fmt.Println("---------------------------------------send syncvars buffered")
 		ServerManager.UpdateSyncVarsBuffered()
 
-		// msg, num := World.Print(false)
-		// if num > 0 {
-		// 	fmt.Println(msg)
-		// }
+		msg, num := World.Print(false)
+		if num > 0 {
+			fmt.Println(msg)
+		}
 		//fmt.Println("---------------------------------------reset applied actions")
 		World.ResetActions()
 
