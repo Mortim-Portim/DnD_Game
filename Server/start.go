@@ -66,7 +66,7 @@ func Start() {
 	}
 
 	GC.InitSyncVarStandardTypes()
-	GC.PRINT_LOG_PRIORITY = 0
+	GC.PRINT_LOG_PRIORITY = 3
 	Server = GC.GetNewServer()
 	ServerManager = GC.GetServerManager(Server)
 	ServerManager.InputHandler = ServerInput
