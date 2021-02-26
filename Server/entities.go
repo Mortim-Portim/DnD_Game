@@ -31,14 +31,11 @@ func (u *EU_Random_Moves) Update(e *TNE.Entity, world *TNE.SmallWorld) {
 	u.framesSinceLastUpdate++
 }
 
-var EntityIDs = 0
-
 func SpawnEntity(name string, w *TNE.World, x, y float64, ufnc TNE.EntityUpdater) {
 	ent, err := w.Ef.GetByName(name)
 	CheckErr(err)
 	ent.SetMiddleTo(x, y)
-	ent.ID = int16(EntityIDs)
-	EntityIDs++
+	ent.ID = int16(EntityIDFactory.GetID(0, 32768))
 	if ufnc != nil {
 		ent.RegisterUpdateCallback(ufnc)
 	}
