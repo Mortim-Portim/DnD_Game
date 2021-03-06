@@ -117,6 +117,7 @@ func Start() {
 				cidxs := World.GetPlayerChunks(sm.ActivePlayer.Player)
 				World.UpdateChunks(cidxs)
 				sm.SetEntitiesFromChunks(World.Chunks, cidxs...)
+				sm.CheckActivePlayerDeath()
 			}
 		}
 		//fmt.Println("---------------------------------------Update the player of the smallworlds")
