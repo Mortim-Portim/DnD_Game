@@ -1,4 +1,4 @@
-package Server
+package main
 
 import (
 	"github.com/mortim-portim/TN_Engine/TNE"

@@ -1,4 +1,4 @@
-package Server
+package main
 
 import (
 	"flag"
@@ -66,7 +66,7 @@ func Start() {
 	}
 
 	GC.InitSyncVarStandardTypes()
-	GC.PRINT_LOG_PRIORITY = 1
+	GC.PRINT_LOG_PRIORITY = 5
 	Server = GC.GetNewServer()
 	ServerManager = GC.GetServerManager(Server)
 	ServerManager.InputHandler = ServerInput
@@ -117,6 +117,7 @@ func Start() {
 				cidxs := World.GetPlayerChunks(sm.ActivePlayer.Player)
 				World.UpdateChunks(cidxs)
 				sm.SetEntitiesFromChunks(World.Chunks, cidxs...)
+				sm.CheckActivePlayerDeath()
 			}
 		}
 		//fmt.Println("---------------------------------------Update the player of the smallworlds")
@@ -162,7 +163,6 @@ func ServerInput(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 func ServerNewConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	fmt.Println("New Client Connected: ", c.RemoteAddr().String())
 
-	playerJoining.Lock()
 	data := append([]byte{GC.BINARYMSG}, []byte(TNE.NumberOfSVACIDs_Msg)...)
 	data = append(data, cmp.Int16ToBytes(int16(TNE.GetSVACID_Count()))...)
 	s.SendBuffered(data, c)
@@ -171,11 +171,14 @@ func ServerNewConn(c *ws.Conn, mt int, msg []byte, err error, s *GC.Server) {
 	newSM := SmallWorld.New()
 	newSM.Register(ServerManager, c)
 
+	time.Sleep(time.Millisecond * 50)
+
 	newSM.SetWorldStruct(newSM.Struct)
 	newSM.SetTimePerFrame(SmallWorld.TimePerFrame)
 	ServerManager.UpdateSyncVarsNormal()
 	s.WaitForConfirmation(c)
 
+	playerJoining.Lock()
 	SmPerCon[c] = newSM
 	PlayersChanged = true
 	playerJoining.Unlock()
